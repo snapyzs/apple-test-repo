@@ -1,13 +1,40 @@
 #include "Game.h"
+#include <iostream>
 
 namespace ag {
 
     void initGame(stateGame& game) {
         initPlayer(game.player);
-        initUI();
+        
+        game.apple = new Apple[game.randomApple];
 
-        for (int i = 0; i < APPLE_COUNT; i++) {
+        for (int i = 0; i < game.randomApple; i++) {
             initApple(game.apple[i]);
+        }
+
+        initUI();
+    }
+
+    void changeAppleGameMode(stateGame& game,int count) {
+        delete[] game.apple;
+        game.randomApple = count;
+        game.apple = new Apple[count];
+        for (int i = 0; i < count; i++) {
+            initApple(game.apple[i]);
+        }
+        game.ui.gameMode = true;
+    }
+    
+    void gameMode(stateGame& game) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num1)) {
+            game.gameModeRun |= static_cast<uint32_t>(stateGame::doneApple);
+            changeAppleGameMode(game,20);
+        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num2)) {
+            game.gameModeRun |= static_cast<uint32_t>(stateGame::infApple);
+            changeAppleGameMode(game, 30);
+        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num3)) {
+            game.gameModeRun |= static_cast<uint32_t>(stateGame::speedPlayer) | static_cast<uint32_t>(stateGame::infApple);
+            changeAppleGameMode(game, 50);
         }
     }
 
@@ -21,22 +48,8 @@ namespace ag {
         game.player.playerShape.setPosition({ game.player.playerPosition.x, game.player.playerPosition.y });
         game.player.playerSpeed = SPEED_PLAYER;
         game.eatCountApple = 0;
-        for (int i = 0; i < APPLE_COUNT; i++) {
+        for (int i = 0; i < game.randomApple; i++) {
             game.apple[i].appleArray.setPosition({ getRandomPosition(SCREEN_WIDTH,SCREEN_HEIGHT).x, getRandomPosition(SCREEN_WIDTH,SCREEN_HEIGHT).y });
-        }
-    }
-
-    void checkStatusGame(stateGame& game, float& deltaTime) {
-        if (!game.isAlivePlayer) {
-            if (game.timeSinceGameOver <= PAUSE_TIME) {
-                game.timeSinceGameOver += deltaTime;
-            }
-            else {
-                game.isAlivePlayer = true;
-                restartGame(game);
-            }
-        } else {
-            updateGame(game, deltaTime);
         }
     }
 
@@ -74,25 +87,56 @@ namespace ag {
 
     }
 
-    void drawGame(stateGame& game, sf::RenderWindow& window) {
+    void checkStatusGame(stateGame& game, float& deltaTime) {
+        if (!game.ui.gameMode) {
+            gameMode(game);
+        } else {
+            if (!game.isAlivePlayer) {
+                if (game.timeSinceGameOver <= PAUSE_TIME) {
+                    game.timeSinceGameOver += deltaTime;
+                }
+                else {
+                    game.isAlivePlayer = true;
+                    restartGame(game);
+                }
+            }
+            else {
+                updateGame(game, deltaTime);
+            }
+        }
+    }
 
-        window.clear();
-        window.draw(game.player.playerShape);
 
-        for (int i = 0; i < APPLE_COUNT; i++) {
+    void gameModeRunning(stateGame& game, sf::RenderWindow& window) {
+        for (int i = 0; i < game.randomApple; i++) {
+            if (i % 2 == 0) {
+                game.apple[i].appleArray.setTexture(&game.apple[i].textureAppleGreen);
+            }
             if (!game.apple[i].isCollision) {
                 if (checkCollision(game.player.playerShape.getPosition().x, game.player.playerShape.getPosition().y, game.apple[i].appleArray.getPosition().x, game.apple[i].appleArray.getPosition().y, PLAYER_SIZE, APPLE_SIZE)) {
-                    game.apple[i].appleArray.setPosition({ getRandomPosition(SCREEN_WIDTH,SCREEN_HEIGHT).x, getRandomPosition(SCREEN_WIDTH,SCREEN_HEIGHT).y });
-                    if (i % 2 == 0) {
-                        game.apple[i].appleArray.setTexture(&game.apple[i].textureAppleGreen);
+                    if (game.gameModeRun & static_cast<uint32_t>(stateGame::infApple)) {
+                        game.apple[i].appleArray.setPosition({ getRandomPosition(SCREEN_WIDTH,SCREEN_HEIGHT).x, getRandomPosition(SCREEN_WIDTH,SCREEN_HEIGHT).y });
                     }
-                    game.player.playerSpeed += PLAYER_BOOST;
+                    if (game.gameModeRun & static_cast<uint32_t>(stateGame::doneApple)) {
+                        game.apple[i].appleArray.setPosition({ -50.f, -50.f });
+                    }
+                    if (game.gameModeRun & static_cast<uint32_t>(stateGame::speedPlayer) && game.gameModeRun & static_cast<uint32_t>(stateGame::infApple)) {
+                        game.player.playerSpeed += PLAYER_BOOST;
+                    }
                     game.eatCountApple++;
                     game.player.soundEat.play();
                 }
                 window.draw(game.apple[i].appleArray);
             }
         }
+    }
+
+    void drawGame(stateGame& game, sf::RenderWindow& window) {
+
+        window.clear();
+        window.draw(game.player.playerShape);
+
+        gameModeRunning(game, window);
 
         drawUI(game.ui, window);
 

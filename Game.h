@@ -7,17 +7,21 @@ namespace ag {
 
     struct stateGame {
         Player player;
-        Apple apple[APPLE_COUNT];
+        Apple* apple;
         bool isAlivePlayer = true;
         float timeSinceGameOver = 0.f;
+        int randomApple = float(rand()) / RAND_MAX * 50;
         int eatCountApple = 0;
         stateUI ui;
+        uint32_t gameModeRun = 0;
+        enum gameMode {
+            doneApple = 1 << 0, // 0
+            infApple = 1 << 1, // 1
+            speedPlayer = 1 << 2 // 2
+        };
     };
 
     void initGame(stateGame& game);
-    void gameOver(stateGame& game);
-    void updateGame(stateGame& game, float& deltaTime);
     void drawGame(stateGame& game, sf::RenderWindow& window);
-    void restartGame(stateGame& game);
     void checkStatusGame(stateGame& game, float& deltaTime);
 }
