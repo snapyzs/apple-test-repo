@@ -8,6 +8,7 @@ namespace ag {
 
 	struct stateUI {
 		bool stateGameOverText = false;
+		bool gameMode = false;
 	};
 
 	// in SFML 3 not exist default constructor sf::Text, and can't use in struct stateUI 
